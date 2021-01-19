@@ -12,6 +12,7 @@
   "engines": {
     "node": ">=10"
   },
+  "sideEffects": false,
   "scripts": {
     "start": "tsdx watch",
     "build": "tsdx build",
