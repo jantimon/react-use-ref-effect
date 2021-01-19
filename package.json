@@ -1,0 +1,62 @@
+{
+  "name": "react-use-ref-effect",
+  "description": "an useEffect hook optimized for useRef",
+  "version": "1.0.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "start": "tsdx watch",
+    "build": "tsdx build",
+    "test": "tsdx test",
+    "lint": "tsdx lint src",
+    "prepare": "tsdx build",
+    "size": "size-limit",
+    "analyze": "size-limit --why"
+  },
+  "peerDependencies": {
+    "react": ">=16"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint src --fix"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "repository": "https://github.com/jantimon/react-use-ref-effect",
+  "author": "Jan Nicklas <j.nicklas@me.com>",
+  "module": "dist/react-use-ref-effect.esm.js",
+  "size-limit": [
+    {
+      "path": "dist/react-use-ref-effect.cjs.production.min.js",
+      "limit": "222 B"
+    },
+    {
+      "path": "dist/react-use-ref-effect.esm.js",
+      "limit": "222 B"
+    }
+  ],
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "4.9.1",
+    "@types/react": "17.0.0",
+    "@types/react-dom": "17.0.0",
+    "husky": "4.3.8",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "size-limit": "4.9.1",
+    "tsdx": "0.14.1",
+    "typescript": "4.1.3"
+  }
+}
