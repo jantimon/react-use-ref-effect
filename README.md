@@ -24,14 +24,14 @@ Allows cleaning up once React detaches the DOM node from the ref again.
 
 # API
 
-## useCallbackRef API
+## useRefEffect API
 Use case: every time you have to react to ref change
 
 - `const ref = useRefEffect(callback)` - would call provided `callback` when ref is changed.
 
-- `const ref = useCallbackRef(callback, [])` - would call provided `callback` when ref is changed or a dependency is changed - similar to useEffect.
+- `const ref = useRefEffect(callback, [])` - would call provided `callback` when ref is changed or a dependency is changed - similar to useEffect.
 
-- `const ref = useCallbackRef(() => { return cleanupCallback }, [])` - would call provided `cleanUpcallback` once the component unmounts or if react removes the referenced DOM element 
+- `const ref = useRefEffect(() => { return cleanupCallback }, [])` - would call provided `cleanUpcallback` once the component unmounts or if react removes the referenced DOM element 
 
 ```js
 import { useRefEffect } from 'react-use-ref-effect';
