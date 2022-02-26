@@ -15,7 +15,7 @@ const noop: (...args: any[]) => any = () => {};
  * Accepts a function that contains imperative, possibly effectful code.
  *
  * @param effect Imperative function that can return a cleanup function
- * @param deps If present, effect will only activate if the values in the list change.
+ * @param deps If present, effect will only activate if the ref or the values in the list change.
  */
 export const useRefEffect = <T extends unknown>(
   effect: (element: T) => void | (() => void),
@@ -25,54 +25,64 @@ export const useRefEffect = <T extends unknown>(
   const internalRef = useState(() => {
     let currentValue = null as T | null;
     let cleanupPreviousEffect = noop as () => void;
-    let currentDeps: any[] | undefined = undefined;
+    let currentDeps: any[] | undefined;
     /**
      * React.RefCallback
      */
-    function setRefValue(newElement: T | null) {
-      if (internalRef.deps !== currentDeps || currentValue !== newElement) {
+    let setRefValue = (newElement: T | null) => {
+      // Only execute if dependencies or element changed:
+      if (
+        internalRef.dependencies_ !== currentDeps ||
+        currentValue !== newElement
+      ) {
         currentValue = newElement;
-        currentDeps = internalRef.deps;
-        internalRef.cleanup();
+        currentDeps = internalRef.dependencies_;
+        internalRef.cleanup_();
         if (newElement) {
-          cleanupPreviousEffect = internalRef.run(newElement) || noop;
+          cleanupPreviousEffect = internalRef.effect_(newElement) || noop;
         }
       }
-    }
+    };
     return {
-      run: effect,
-      cleanup: () => {
+      /** Execute the effects cleanup function */
+      cleanup_: () => {
         cleanupPreviousEffect();
         cleanupPreviousEffect = noop;
       },
-      deps: dependencies,
-      ref: Object.defineProperty(setRefValue, 'current', {
+      ref_: Object.defineProperty(setRefValue, 'current', {
         get: () => currentValue,
         set: setRefValue,
       }),
+    } as {
+      cleanup_: () => void;
+      ref_: React.RefCallback<T> & React.MutableRefObject<T | null>;
+      // Those two properties will be set immediately after initialisation
+      effect_: typeof effect;
+      dependencies_: typeof dependencies;
     };
   })[0];
 
   // Show the current ref value in development
   // in react dev tools
   if (process.env.NODE_ENV !== 'production') {
-    useDebugValue(internalRef.ref.current);
+    useDebugValue(internalRef.ref_.current);
   }
 
   // Keep a ref to the latest callback
-  internalRef.run = effect;
-  // Keep a ref to the latest dependencies
-  internalRef.deps = dependencies;
+  internalRef.effect_ = effect;
 
-  // Run effect if dependencies change
-  useEffect(() => {
-    internalRef.ref(internalRef.ref.current);
-    return () => {
-      if (internalRef.deps === dependencies) {
-        internalRef.cleanup();
-      }
-    };
-  }, dependencies || []);
+  useEffect(
+    () => {
+      // Run effect if dependencies change
+      internalRef.ref_(internalRef.ref_.current);
+      return () => {
+        if (internalRef.dependencies_ === dependencies) {
+          internalRef.cleanup_();
+        }
+      };
+    }, // Keep a ref to the latest dependencies
+    (internalRef.dependencies_ = dependencies)
+  );
 
-  return internalRef.ref;
+  return internalRef.ref_;
 };

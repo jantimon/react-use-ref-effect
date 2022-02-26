@@ -20,7 +20,7 @@ Executes an effect directly after React attaches a ref to a DOM node.
 Allows cleaning up once React detaches the DOM node from the ref again.
   
 - The hook does __not__ triggering additional renderings.
-- The hook size is __only 200b__.
+- The hook size is __only 339b__.
 
 # API
 
@@ -76,8 +76,11 @@ useEffect(() => {
 By using a pattern from the official [react hooks faq](https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node) `useRefEffect` can be used as a safe replacement:
 
 ```js
-const ref = useRefEffect((current) => {
-  // do sth with current
+const ref = useRefEffect((element) => {
+  // do sth with element
+  return () => {
+    // cleanup
+  }
 }, [])
 ```
 ✅ &nbsp; doesn't trigger additional renderings on mount
