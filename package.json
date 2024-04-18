@@ -5,6 +5,12 @@
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "src"
@@ -41,11 +47,11 @@
   "module": "dist/react-use-ref-effect.esm.js",
   "size-limit": [
     {
-      "path": "dist/react-use-ref-effect.cjs.production.min.js",
-      "limit": "500 B"
+      "path": "dist/index.js",
+      "limit": "600 B"
     },
     {
-      "path": "dist/react-use-ref-effect.esm.js",
+      "path": "dist/index.mjs",
       "limit": "500 B"
     }
   ],
