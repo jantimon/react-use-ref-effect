@@ -1,7 +1,7 @@
 {
   "name": "react-use-ref-effect",
   "description": "an useEffect hook optimized for useRef",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
