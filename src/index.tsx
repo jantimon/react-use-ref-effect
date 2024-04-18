@@ -19,7 +19,7 @@ const noop: (...args: any[]) => any = () => {};
  */
 export const useRefEffect = <T extends unknown>(
   effect: (element: T) => void | (() => void),
-  dependencies?: any[]
+  dependencies: any[] = []
 ): React.RefCallback<T> & React.MutableRefObject<T | null> => {
   // Use the initial state as mutable reference
   const internalRef = useState(() => {
@@ -78,6 +78,7 @@ export const useRefEffect = <T extends unknown>(
       return () => {
         if (internalRef.dependencies_ === dependencies) {
           internalRef.cleanup_();
+          internalRef.dependencies_ = [];
         }
       };
     }, // Keep a ref to the latest dependencies
