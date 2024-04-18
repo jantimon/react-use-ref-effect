@@ -23,7 +23,7 @@
   "scripts": {
     "start": "tsup --watch --config tsup.config.js",
     "build": "tsup --config tsup.config.js",
-    "test": "vitest test --environment=happy-dom",
+    "test": "vitest run --environment=happy-dom",
     "lint": "prettier --write 'src/**/*.{ts,tsx}'",
     "size": "size-limit",
     "prepare": "husky install",
