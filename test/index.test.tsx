@@ -1,8 +1,10 @@
 import * as React from 'react';
-import { useState } from 'react';
-import * as ReactDOM from 'react-dom';
+import { StrictMode, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useRefEffect } from '../src';
 import { act, Simulate } from 'react-dom/test-utils';
+import {describe, expect, it} from 'vitest';
+
 
 describe('it', () => {
   it('executes effect on render', () => {
@@ -15,8 +17,9 @@ describe('it', () => {
       return <div ref={ref}>Demo</div>;
     };
     expect(effectRuns).toBe(0);
-    ReactDOM.render(<Demo />, div);
-    ReactDOM.unmountComponentAtNode(div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    act(() => root.unmount() );
     expect(effectRuns).toBe(1);
   });
 
@@ -33,8 +36,9 @@ describe('it', () => {
         </a>
       );
     };
-    ReactDOM.render(<Demo />, div);
-    ReactDOM.unmountComponentAtNode(div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    act(() => root.unmount() );
     expect(effectElement instanceof HTMLAnchorElement).toBe(true);
   });
 
@@ -49,9 +53,10 @@ describe('it', () => {
       }, []);
       return <div ref={ref}>Demo</div>;
     };
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(cleanupRuns).toBe(0);
-    ReactDOM.unmountComponentAtNode(div);
+    act(() => root.unmount() );
     expect(cleanupRuns).toBe(1);
   });
 
@@ -66,10 +71,11 @@ describe('it', () => {
       }, []);
       return <div ref={ref}>Demo</div>;
     };
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(cleanupRuns).toBe(0);
-    ReactDOM.render(<React.Fragment />, div);
-    ReactDOM.unmountComponentAtNode(div);
+    root.render(<React.Fragment />);
+    act(() => root.unmount() );
     expect(cleanupRuns).toBe(1);
   });
 
@@ -91,7 +97,8 @@ describe('it', () => {
         </button>
       );
     };
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(0);
     act(() => {
@@ -99,7 +106,7 @@ describe('it', () => {
     });
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(1);
-    ReactDOM.unmountComponentAtNode(div);
+    act(() => root.unmount() );
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(2);
   });
@@ -125,7 +132,8 @@ describe('it', () => {
         </>
       );
     };
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(effectRuns).toBe(0);
     expect(cleanupRuns).toBe(0);
     act(() => {
@@ -134,7 +142,7 @@ describe('it', () => {
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(0);
     expect(element.tagName).toBe('SPAN');
-    ReactDOM.unmountComponentAtNode(div);
+    act(() => root.unmount() );
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(1);
   });
@@ -161,7 +169,8 @@ describe('it', () => {
         </>
       );
     };
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(effectRuns).toBe(0);
     expect(cleanupRuns).toBe(0);
     console.log('click');
@@ -176,7 +185,7 @@ describe('it', () => {
     });
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(1);
-    ReactDOM.unmountComponentAtNode(div);
+    act(() => root.unmount() );
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(2);
   });
@@ -204,13 +213,14 @@ describe('it', () => {
       );
     };
     expect(elementName).toBe('');
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(elementName).toBe('H1');
     act(() => {
       Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
     });
     expect(elementName).toBe('SPAN');
-    ReactDOM.unmountComponentAtNode(div);
+    act(() => root.unmount() );
     expect(elementName).toBe('');
   });
 
@@ -231,7 +241,8 @@ describe('it', () => {
         </button>
       );
     };
-    ReactDOM.render(<Demo />, div);
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
     expect(effectRuns).toBe(0);
     expect(cleanupRuns).toBe(0);
     act(() => {
@@ -239,10 +250,35 @@ describe('it', () => {
     });
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(0);
-    ReactDOM.render(<React.Fragment />, div)
-    ReactDOM.unmountComponentAtNode(div);
+    root.render(<React.Fragment />)
+    act(() => root.unmount() );
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(1);
+  });
+
+  it("works in strict mode", () => {
+    const div = document.createElement('div');
+    let effectRuns = 0;
+    let cleanupRuns = 0;
+    const Demo = () => {
+      const ref = useRefEffect(() => {
+        effectRuns++;
+        return () => {
+          cleanupRuns++;
+        };
+      }, []);
+      return (
+        <button ref={ref}>
+          Demo
+        </button>
+      );
+    };
+
+    act(() => {
+      createRoot(div).render(<StrictMode><Demo /></StrictMode>);
+    });
+    expect(cleanupRuns).toBe(1);
+    expect(effectRuns).toBe(2);
   });
 
 });
