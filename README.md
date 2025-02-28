@@ -23,7 +23,7 @@ Executes an effect directly after React attaches a ref to a DOM node and provide
 
 ## Version 2.0.0 Update
 
-React 19 adds cleanup functions for ref callbacks, so users should rather use `useCallback` directly instead of `react-use-ref-effect` package.  
+React 19 adds cleanup functions for ref callbacks, so users should rather use `useCallback` directly instead of the `react-use-ref-effect` package.  
 Version 2.0.0 is provided only for convenience to make upgrading easier for existing users.
 
 # API
