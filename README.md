@@ -1,7 +1,7 @@
 <div align="center">
   <h1>useRefEffect</h1>
   <br/>
-  An `useEffect` hook optimized for `useRef`.
+  A lightweight wrapper for React's ref callbacks with cleanup functionality.
   <br/>
     <a href="https://www.npmjs.com/package/react-use-ref-effect">
       <img src="https://img.shields.io/npm/v/react-use-ref-effect.svg?style=flat-square" />
@@ -16,28 +16,31 @@
 
 ---
 
-Executes an effect directly after React attaches a ref to a DOM node.  
-Allows cleaning up once React detaches the DOM node from the ref again.
-  
-- The hook does __not__ triggering additional renderings.
-- The hook size is __only 339b__.
+Executes an effect directly after React attaches a ref to a DOM node and provides cleanup functionality when React detaches the DOM node from the ref.
+
+- The hook does __not__ trigger additional renderings.
+- The hook size is __only 139b__ in v2.0.0.
+
+## Version 2.0.0 Update
+
+React 19 adds cleanup functions for ref callbacks, so users should rather use `useCallback` directly instead of `react-use-ref-effect` package.  
+Version 2.0.0 is provided only for convenience to make upgrading easier for existing users.
 
 # API
 
 ## useRefEffect API
-Use case: every time you have to react to ref change
+Use case: every time you need to react to ref changes with optional cleanup
 
-- `const ref = useRefEffect(callback)` - would call provided `callback` when ref is changed.
+- `const ref = useRefEffect(callback)` - calls the provided `callback` when the ref is changed.
 
-- `const ref = useRefEffect(callback, [])` - would call provided `callback` when ref is changed or a dependency is changed - similar to useEffect.
+- `const ref = useRefEffect(callback, [])` - calls the provided `callback` when the ref is changed or a dependency is changed - similar to useEffect.
 
-- `const ref = useRefEffect(() => { return cleanupCallback }, [])` - would call provided `cleanUpcallback` once the component unmounts or if react removes the referenced DOM element 
+- `const ref = useRefEffect((element) => { return cleanupCallback }, [])` - calls the provided `cleanupCallback` once the component unmounts or when React removes the referenced DOM element.
 
 ```js
 import { useRefEffect } from 'react-use-ref-effect';
 
 const Component = () => {
-
   const ref = useRefEffect((element) => {
     console.log('Element', element, 'is now available');
     return () => {
@@ -49,54 +52,72 @@ const Component = () => {
 }
 ```
 
-# Motivation
+# React 19 Compatibility
 
-React is delivering two powerful hooks `useRef` and `useEffect` however they don't work properly in combination:
+React 19 added native support for cleanup functions in ref callbacks. This package now leverages this feature to provide a simpler implementation while maintaining the same API.
+
+If you're using React 19, you could achieve similar functionality with:
 
 ```js
+import { useCallback } from 'react';
+
+const Component = () => {
+  const ref = useCallback((element) => {
+    if (element) {
+      console.log('Element', element, 'is now available');
+      return () => {
+        console.log('Element', element, 'is no longer available');
+      }
+    }
+  }, []);
+
+  return <div ref={ref}>Hello World</div>
+}
+```
+
+This package provides a convenient wrapper around this pattern with dependency tracking.
+
+# Motivation
+
+React provides two powerful hooks: `useRef` and `useEffect`.  
+However before React 19, they didn't work perfectly in combination when dealing with conditional rendering:
+
+```js
+// ⚠️ Pre-React 19 approach with issues
 const ref = useRef();
 useEffect(() => {
-  // do sth with ref.current
+  // do something with ref.current
 }, [ref.current])
 ```
 
-✅ &nbsp; doesn't trigger additional renderings on mount
+The issues with this approach were:
 
-🚫 &nbsp; fails to execute the effect for conditionally rendered components  
+🚫 &nbsp; Failed to execute the effect for conditionally rendered components  
 (e.g. `isOpen && <span ref={ref}>Demo</span>`)
 
-🚫 &nbsp; fails to execute the effect for lazy rendered components  
+🚫 &nbsp; Failed to execute the effect for lazy rendered components  
 (e.g. `<LazyComponent><span ref={ref}>Demo</span></LazyComponent>`)
 
-🚫 &nbsp; fails to execute the effect if a child controls the time to mount  
+🚫 &nbsp; Failed to execute the effect if a child controlled the time to mount  
 (e.g. `<Slider waitFor={3000}><span ref={ref}>Demo</span></Slider>`)
 
 <br /><br />
 
-By using a pattern from the official [react hooks faq](https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node) `useRefEffect` can be used as a safe replacement:
+The `useRefEffect` hook solved these issues by providing a pattern recommended in the [React hooks FAQ](https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node):
 
 ```js
 const ref = useRefEffect((element) => {
-  // do sth with element
+  // do something with element
   return () => {
     // cleanup
   }
 }, [])
 ```
-✅ &nbsp; doesn't trigger additional renderings on mount
 
-✅ &nbsp; executes effect and effect cleanup for conditionally and lazy rendered components  
-(e.g. `isOpen && <span ref={ref}>Demo</span>`)
-
-✅ &nbsp; executes effect and effect cleanup for lazy rendered components  
-(e.g. `<LazyComponent><span ref={ref}>Demo</span></LazyComponent>`)
-
-✅ &nbsp; executes effect and effect cleanup if a child controls the time to mount  
-(e.g. `<Slider waitFor={3000}><span ref={ref}>Demo</span></Slider>`)
+With React 19, this pattern is now supported natively through ref callbacks with cleanup, and this package provides a convenient wrapper around that functionality.
 
 # Similar packages:
 - [use-callback-ref](https://github.com/theKashey/use-callback-ref) - great utils around refs and callbacks
 
 # License
 MIT
-

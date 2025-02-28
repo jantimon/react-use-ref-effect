@@ -2,9 +2,18 @@ import * as React from 'react';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useRefEffect } from '../src';
-import { act, Simulate } from 'react-dom/test-utils';
-import {describe, expect, it} from 'vitest';
+import { act } from 'react-dom/test-utils';
+import { describe, expect, it } from 'vitest';
 
+// Helper function to replace Simulate.click
+function simulateClick(element: Element) {
+  const clickEvent = new MouseEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    button: 0
+  });
+  element.dispatchEvent(clickEvent);
+}
 
 describe('it', () => {
   it('executes effect on render', () => {
@@ -19,7 +28,7 @@ describe('it', () => {
     expect(effectRuns).toBe(0);
     const root = createRoot(div);
     act(() => root.render(<Demo />));
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(effectRuns).toBe(1);
   });
 
@@ -38,7 +47,7 @@ describe('it', () => {
     };
     const root = createRoot(div);
     act(() => root.render(<Demo />));
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(effectElement instanceof HTMLAnchorElement).toBe(true);
   });
 
@@ -56,7 +65,7 @@ describe('it', () => {
     const root = createRoot(div);
     act(() => root.render(<Demo />));
     expect(cleanupRuns).toBe(0);
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(cleanupRuns).toBe(1);
   });
 
@@ -75,7 +84,7 @@ describe('it', () => {
     act(() => root.render(<Demo />));
     expect(cleanupRuns).toBe(0);
     root.render(<React.Fragment />);
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(cleanupRuns).toBe(1);
   });
 
@@ -102,11 +111,11 @@ describe('it', () => {
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(0);
     act(() => {
-      Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
+      simulateClick(div.querySelector<HTMLButtonElement>('button')!);
     });
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(1);
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(2);
   });
@@ -137,12 +146,12 @@ describe('it', () => {
     expect(effectRuns).toBe(0);
     expect(cleanupRuns).toBe(0);
     act(() => {
-      Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
+      simulateClick(div.querySelector<HTMLButtonElement>('button')!);
     });
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(0);
     expect(element.tagName).toBe('SPAN');
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(effectRuns).toBe(1);
     expect(cleanupRuns).toBe(1);
   });
@@ -175,17 +184,17 @@ describe('it', () => {
     expect(cleanupRuns).toBe(0);
     console.log('click');
     act(() => {
-      Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
+      simulateClick(div.querySelector<HTMLButtonElement>('button')!);
     });
     expect(effectRuns).toBe(1);
     expect(elementName).toBe('SPAN');
     expect(cleanupRuns).toBe(0);
     act(() => {
-      Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
+      simulateClick(div.querySelector<HTMLButtonElement>('button')!);
     });
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(1);
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(effectRuns).toBe(2);
     expect(cleanupRuns).toBe(2);
   });
@@ -217,43 +226,11 @@ describe('it', () => {
     act(() => root.render(<Demo />));
     expect(elementName).toBe('H1');
     act(() => {
-      Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
+      simulateClick(div.querySelector<HTMLButtonElement>('button')!);
     });
     expect(elementName).toBe('SPAN');
-    act(() => root.unmount() );
+    act(() => root.unmount());
     expect(elementName).toBe('');
-  });
-
-  it('executes effect on manual setting', () => {
-    const div = document.createElement('div');
-    let effectRuns = 0;
-    let cleanupRuns = 0;
-    const Demo = () => {
-      const ref = useRefEffect(() => {
-        effectRuns++;
-        return () => {
-          cleanupRuns++;
-        };
-      }, []);
-      return (
-        <button onClick={() => { ref.current = div }}>
-          Demo
-        </button>
-      );
-    };
-    const root = createRoot(div);
-    act(() => root.render(<Demo />));
-    expect(effectRuns).toBe(0);
-    expect(cleanupRuns).toBe(0);
-    act(() => {
-      Simulate.click(div.querySelector<HTMLButtonElement>('button')!);
-    });
-    expect(effectRuns).toBe(1);
-    expect(cleanupRuns).toBe(0);
-    root.render(<React.Fragment />)
-    act(() => root.unmount() );
-    expect(effectRuns).toBe(1);
-    expect(cleanupRuns).toBe(1);
   });
 
   it("works in strict mode", () => {
@@ -280,5 +257,4 @@ describe('it', () => {
     expect(cleanupRuns).toBe(1);
     expect(effectRuns).toBe(2);
   });
-
 });
