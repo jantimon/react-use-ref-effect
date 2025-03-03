@@ -1,4 +1,4 @@
-import { DependencyList, useCallback, RefCallback } from 'react';
+import { DependencyList, useCallback, RefCallback, useRef } from 'react';
 
 /**
  * `useRefEffect` returns a RefCallback to be connected with a DOM Node.
@@ -34,3 +34,35 @@ export const useMergeRefs = <T extends unknown>(...refs: RefCallback<T>[]) =>
       };
     }
   }, refs) as RefCallback<T>;
+
+/**
+ * `useRefEffect` returns a RefCallback to be connected with a DOM Node.
+ *
+ * The returned object will persist for the full lifetime of the component.
+ * Accepts a function that contains imperative, possibly effectful code.
+ *
+ * @param effect Imperative function that can return a cleanup function
+ * @param deps Optional array of dependencies which trigger the effect - defaults to []
+ *
+ * @returns A RefCallback with a `current` property that holds the last element
+ */
+export const useRefEffectWithCurrent = <T extends unknown>(
+  effect: (element: T) => void | (() => void),
+  dependencies: DependencyList = []
+) => {
+  const ref = Object.assign(
+    useRefEffect((element: T) => {
+      ref.current = element;
+      const cleanup = effect(element);
+      return () => {
+        console.log('cleanup');
+        ref.current = null;
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+      };
+    }, dependencies),
+    useRef<T | null>(null)
+  );
+  return ref;
+};

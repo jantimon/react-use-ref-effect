@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useMergeRefs, useRefEffect } from '../src';
+import { useMergeRefs, useRefEffect, useRefEffectWithCurrent } from '../src';
 import { act } from 'react';
 import { describe, expect, it } from 'vitest';
 
@@ -405,5 +405,73 @@ describe('useMergeRefs', () => {
     expect(ref2CallCount).toBe(2);
     expect(cleanup1Count).toBe(1);
     expect(cleanup2Count).toBe(1);
+  });
+
+  it('works with useRefEffectWithCurrent', () => {
+    const div = document.createElement('div');
+    let ref1CallCount = 0;
+    let ref2CallCount = 0;
+    let cleanup1Count = 0;
+    let cleanup2Count = 0;
+
+    const Demo = () => {
+      const ref1 = useRefEffectWithCurrent(() => {
+        ref1CallCount++;
+        return () => {
+          cleanup1Count++;
+        };
+      }, []);
+
+      const ref2 = useRefEffect(() => {
+        ref2CallCount++;
+        return () => {
+          cleanup2Count++;
+        };
+      }, []);
+
+      const mergedRef = useMergeRefs(ref1, ref2);
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    act(() => {
+      createRoot(div).render(<React.StrictMode><Demo /></React.StrictMode>);
+    });
+
+    // In strict mode, effects run twice
+    expect(ref1CallCount).toBe(2);
+    expect(ref2CallCount).toBe(2);
+    expect(cleanup1Count).toBe(1);
+    expect(cleanup2Count).toBe(1);
+  });
+});
+
+describe('useRefEffectWithCurrent', () => {
+  it('maintains current property that references the DOM element', () => {
+    const div = document.createElement('div');
+    let controlRef: {
+      current: HTMLDivElement | null;
+    } = {
+      current: null
+    }
+    
+    const Demo = () => {
+      const ref = useRefEffectWithCurrent<HTMLDivElement>((element) => {
+        // The effect itself doesn't need to do anything special
+      }, []);
+      controlRef = ref;
+      return <div ref={ref}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    
+    // Check that the current property is correctly set
+    expect(controlRef.current instanceof HTMLDivElement).toBe(true);
+    
+    act(() => root.unmount());
+    
+    // Check that current is null after unmount
+    expect(controlRef.current).toBe(null);
   });
 });

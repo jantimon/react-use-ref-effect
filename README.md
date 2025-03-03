@@ -23,8 +23,7 @@ Executes an effect directly after React attaches a ref to a DOM node and provide
 
 ## Version 2.0.0 Update
 
-React 19 adds cleanup functions for ref callbacks, so users should rather use `useCallback` directly instead of the `react-use-ref-effect` package.  
-Version 2.0.0 is provided only for convenience to make upgrading easier for existing users.
+React 19 adds cleanup functions for ref callbacks, so users should consider useing `useCallback` directly instead of the `react-use-ref-effect` package.  
 
 # API
 
@@ -150,6 +149,37 @@ const ref = useRefEffect((element) => {
 ```
 
 With React 19, this pattern is now supported natively through ref callbacks with cleanup, and this package provides a convenient wrapper around that functionality.
+
+## useRefEffectWithCurrent API
+Use case: when you need to react to ref changes **and** maintain a reference to the current element
+
+```js
+import { useRefEffectWithCurrent } from 'react-use-ref-effect';
+
+const Component = () => {
+  // Get both effect and current reference capabilities
+  const ref = useRefEffectWithCurrent((element) => {
+    console.log('Element attached:', element);
+    return () => {
+      console.log('Element detached:', element);
+    }
+  }, []);
+  
+  // You can access ref.current anytime, even in event handlers
+  const handleClick = () => {
+    if (ref.current) {
+      console.log('Current element dimensions:', ref.current.getBoundingClientRect());
+    }
+  };
+
+  return (
+    <>
+      <div ref={ref}>This element is accessible via ref.current</div>
+      <button onClick={handleClick}>Log Element Dimensions</button>
+    </>
+  );
+}
+```
 
 # Similar packages:
 - [use-callback-ref](https://github.com/theKashey/use-callback-ref) - great utils around refs and callbacks
