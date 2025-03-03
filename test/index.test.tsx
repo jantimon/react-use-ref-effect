@@ -522,4 +522,67 @@ describe('useRefEffectWithCurrent', () => {
     
     act(() => root.unmount());
   });
+
+  it('properly updates current when element changes, not just dependencies', () => {
+    const div = document.createElement('div');
+    let controlRef = null as {
+      current: HTMLDivElement | null;
+    } | null
+    
+    const Demo = () => {
+      const [showAlt, setShowAlt] = useState(false);
+      const [count, setCount] = useState(0);
+      
+      // Create ref with dependencies
+      const ref = useRefEffectWithCurrent<HTMLElement>((element) => {
+      }, [count]);
+      
+      controlRef ||= ref as {
+        current: HTMLDivElement | null;
+      };
+
+      return (
+        <>
+          {!showAlt ? (
+            <div ref={ref} data-testid="first">First Element {count}</div>
+          ) : (
+            <span ref={ref} data-testid="second">Second Element {count}</span>
+          )}
+          <button onClick={() => setCount(c => c + 1)}>Update Count</button>
+          <button onClick={() => setShowAlt(true)}>Switch Element</button>
+        </>
+      );
+    };
+  
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    const [updateButton, switchButton] = div.querySelectorAll('button');
+    if (!controlRef) {
+      throw new Error('controlRef was not set');
+    }
+    
+    // Initial render
+    expect(controlRef.current instanceof HTMLDivElement).toBe(true);
+    expect(controlRef.current?.getAttribute('data-testid')).toBe('first');
+    
+    // Update dependency but keep same element
+    act(() => {
+      simulateClick(updateButton);
+    });
+    
+    // Should still point to the same element after dependency change
+    expect(controlRef.current instanceof HTMLDivElement).toBe(true);
+    expect(controlRef.current?.getAttribute('data-testid')).toBe('first');
+    
+    // Now change the element type
+    act(() => {
+      simulateClick(switchButton);
+    });
+    
+    // After element change, current should point to the new element
+    expect(controlRef.current instanceof HTMLSpanElement).toBe(true);
+    expect(controlRef.current?.getAttribute('data-testid')).toBe('second');
+    
+    act(() => root.unmount());
+  });
 });

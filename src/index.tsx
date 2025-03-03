@@ -1,4 +1,10 @@
-import { DependencyList, useCallback, RefCallback, useRef } from 'react';
+import {
+  DependencyList,
+  useCallback,
+  RefCallback,
+  useRef,
+  useMemo,
+} from 'react';
 
 /**
  * `useRefEffect` returns a RefCallback to be connected with a DOM Node.
@@ -51,18 +57,19 @@ export const useRefEffectWithCurrent = <T extends unknown>(
   dependencies: DependencyList = []
 ) => {
   const currentRef = useRef<T | null>(null);
-  const ref = Object.assign(
-    useRefEffect((element: T) => {
-      currentRef.current = ref.current = element;
-      const cleanup = effect(element);
-      return () => {
-        currentRef.current = ref.current = null;
-        if (typeof cleanup === 'function') {
-          cleanup();
+  return useMemo(
+    () =>
+      Object.defineProperties(
+        (element: T) => {
+          currentRef.current = element;
+          return element && effect(element);
+        },
+        {
+          current: {
+            get: () => currentRef.current,
+          },
         }
-      };
-    }, dependencies),
-    currentRef
-  );
-  return ref;
+      ),
+    dependencies
+  ) as RefCallback<T> & { current: T | null };
 };
