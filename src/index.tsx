@@ -50,18 +50,19 @@ export const useRefEffectWithCurrent = <T extends unknown>(
   effect: (element: T) => void | (() => void),
   dependencies: DependencyList = []
 ) => {
+  const currentRef = useRef<T | null>(null);
   const ref = Object.assign(
     useRefEffect((element: T) => {
-      ref.current = element;
+      currentRef.current = ref.current = element;
       const cleanup = effect(element);
       return () => {
-        ref.current = null;
+        currentRef.current = ref.current = null;
         if (typeof cleanup === 'function') {
           cleanup();
         }
       };
     }, dependencies),
-    useRef<T | null>(null)
+    currentRef
   );
   return ref;
 };

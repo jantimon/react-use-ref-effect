@@ -474,4 +474,52 @@ describe('useRefEffectWithCurrent', () => {
     // Check that current is null after unmount
     expect(controlRef.current).toBe(null);
   });
+
+  it('maintains current property when dependencies change', () => {
+    const div = document.createElement('div');
+    let effectRuns = 0;
+    let controlRef: {
+      current: HTMLDivElement | null;
+    } = {
+      current: null
+    }
+    
+    const Demo = () => {
+      const [count, setCount] = useState(0);
+      const ref = useRefEffectWithCurrent<HTMLDivElement>((element) => {
+        effectRuns++;
+        // The effect should run on dependency changes
+      }, [count]);
+      
+      controlRef = ref;
+      
+      return (
+        <>
+          <div ref={ref}>Test {count}</div>
+          <button onClick={() => setCount(count + 1)}>Increment</button>
+        </>
+      );
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    
+    // Initial render
+    expect(controlRef.current instanceof HTMLDivElement).toBe(true);
+    expect(effectRuns).toBe(1);
+    
+    const initialElement = controlRef.current;
+    
+    // Update the count dependency
+    act(() => {
+      simulateClick(div.querySelector<HTMLButtonElement>('button')!);
+    });
+    
+    // Effect should run again, but current should still reference the same DOM element
+    expect(effectRuns).toBe(2);
+    expect(controlRef.current).toBe(initialElement);
+    expect(controlRef.current instanceof HTMLDivElement).toBe(true);
+    
+    act(() => root.unmount());
+  });
 });
