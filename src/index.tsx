@@ -55,7 +55,6 @@ export const useRefEffectWithCurrent = <T extends unknown>(
       ref.current = element;
       const cleanup = effect(element);
       return () => {
-        console.log('cleanup');
         ref.current = null;
         if (typeof cleanup === 'function') {
           cleanup();
