@@ -52,6 +52,41 @@ const Component = () => {
 }
 ```
 
+## useMergeRefs API
+Use case: when you need to apply multiple refs to a single DOM element
+
+- `const mergedRef = useMergeRefs(ref1, ref2, ...)` - combines multiple refs into a single ref callback that applies all of them to the same element.
+- All cleanup functions from the individual refs are properly called when the element is unmounted or detached.
+- Cannot be mixed with refs from `useRef()`
+
+```js
+import { useRefEffect, useMergeRefs } from 'react-use-ref-effect';
+
+const Component = () => {
+  // A ref for focus management
+  const focusRef = useRefEffect((element) => {
+    element.focus();
+    return () => {
+      console.log('Focus element unmounted');
+    }
+  }, []);
+
+  // A ref for event listeners
+  const eventRef = useRefEffect((element) => {
+    const clickHandler = () => console.log('Element clicked');
+    element.addEventListener('click', clickHandler);
+    return () => {
+      element.removeEventListener('click', clickHandler);
+    }
+  }, []);
+
+  // Combine both refs into one
+  const mergedRef = useMergeRefs(focusRef, eventRef);
+
+  return <input ref={mergedRef} placeholder="I'll be focused and have a click handler" />
+}
+```
+
 # React 19 Compatibility
 
 React 19 added native support for cleanup functions in ref callbacks. This package now leverages this feature to provide a simpler implementation while maintaining the same API.

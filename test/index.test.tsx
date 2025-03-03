@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useRefEffect } from '../src';
-import { act } from 'react-dom/test-utils';
+import { useMergeRefs, useRefEffect } from '../src';
+import { act } from 'react';
 import { describe, expect, it } from 'vitest';
 
 // Helper function to replace Simulate.click
@@ -256,5 +256,154 @@ describe('it', () => {
     });
     expect(cleanupRuns).toBe(1);
     expect(effectRuns).toBe(2);
+  });
+});
+
+
+describe('useMergeRefs', () => {
+  it('calls all refs with the element', () => {
+    const div = document.createElement('div');
+    let ref1Called = false;
+    let ref2Called = false;
+    let ref1Element: any = null;
+    let ref2Element: any = null;
+
+    const Demo = () => {
+      const ref1 = useRefEffect(element => {
+        ref1Called = true;
+        ref1Element = element;
+      }, []);
+
+      const ref2 = useRefEffect(element => {
+        ref2Called = true;
+        ref2Element = element;
+      }, []);
+
+      const mergedRef = useMergeRefs(ref1, ref2);
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+
+    expect(ref1Called).toBe(true);
+    expect(ref2Called).toBe(true);
+    expect(ref1Element instanceof HTMLDivElement).toBe(true);
+    expect(ref2Element instanceof HTMLDivElement).toBe(true);
+    expect(ref1Element).toBe(ref2Element); // Both refs should point to the same element
+    
+    act(() => root.unmount());
+  });
+
+  it('executes cleanup functions from all refs on unmount', () => {
+    const div = document.createElement('div');
+    let cleanup1Run = false;
+    let cleanup2Run = false;
+
+    const Demo = () => {
+      const ref1 = useRefEffect(() => {
+        return () => {
+          cleanup1Run = true;
+        };
+      }, []);
+
+      const ref2 = useRefEffect(() => {
+        return () => {
+          cleanup2Run = true;
+        };
+      }, []);
+
+      const mergedRef = useMergeRefs(ref1, ref2);
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    
+    expect(cleanup1Run).toBe(false);
+    expect(cleanup2Run).toBe(false);
+    
+    act(() => root.unmount());
+    
+    expect(cleanup1Run).toBe(true);
+    expect(cleanup2Run).toBe(true);
+  });
+
+  it('handles updates to the DOM element', () => {
+    const div = document.createElement('div');
+    let ref1Elements: any[] = [];
+    let ref2Elements: any[] = [];
+
+    const Demo = ({ showSpan = false }) => {
+      const ref1 = useRefEffect(element => {
+        ref1Elements.push(element);
+      }, []);
+
+      const ref2 = useRefEffect(element => {
+        ref2Elements.push(element);
+      }, []);
+
+      const mergedRef = useMergeRefs(ref1, ref2);
+
+      return showSpan ? <span ref={mergedRef}>Test</span> : <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    
+    expect(ref1Elements.length).toBe(1);
+    expect(ref2Elements.length).toBe(1);
+    expect(ref1Elements[0] instanceof HTMLDivElement).toBe(true);
+    expect(ref2Elements[0] instanceof HTMLDivElement).toBe(true);
+    
+    // Change the element type to span
+    act(() => root.render(<Demo showSpan={true} />));
+    
+    expect(ref1Elements.length).toBe(2);
+    expect(ref2Elements.length).toBe(2);
+    expect(ref1Elements[1] instanceof HTMLSpanElement).toBe(true);
+    expect(ref2Elements[1] instanceof HTMLSpanElement).toBe(true);
+    
+    act(() => root.unmount());
+  });
+
+  it('works with strict mode', () => {
+    const div = document.createElement('div');
+    let ref1CallCount = 0;
+    let ref2CallCount = 0;
+    let cleanup1Count = 0;
+    let cleanup2Count = 0;
+
+    const Demo = () => {
+      const ref1 = useRefEffect(() => {
+        ref1CallCount++;
+        return () => {
+          cleanup1Count++;
+        };
+      }, []);
+
+      const ref2 = useRefEffect(() => {
+        ref2CallCount++;
+        return () => {
+          cleanup2Count++;
+        };
+      }, []);
+
+      const mergedRef = useMergeRefs(ref1, ref2);
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    act(() => {
+      createRoot(div).render(<React.StrictMode><Demo /></React.StrictMode>);
+    });
+
+    // In strict mode, effects run twice
+    expect(ref1CallCount).toBe(2);
+    expect(ref2CallCount).toBe(2);
+    expect(cleanup1Count).toBe(1);
+    expect(cleanup2Count).toBe(1);
   });
 });

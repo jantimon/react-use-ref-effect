@@ -17,3 +17,20 @@ export const useRefEffect = <T extends unknown>(
     (element: T) => (element && effect(element)) || (() => {}),
     dependencies
   ) as RefCallback<T>;
+
+/**
+ * A custom hook that merges multiple callback refs into one.
+ * @param refs An array of RefCallback<T>
+ * @returns A callback that sets the refs
+ */
+export const useMergeRefs = <T extends unknown>(...refs: RefCallback<T>[]) =>
+  useCallback((element: T) => {
+    const cleanup = refs
+      .map((ref) => ref(element))
+      .filter((fn): fn is () => void => typeof fn === 'function');
+    if (cleanup.length) {
+      return () => {
+        cleanup.forEach((fn) => fn());
+      };
+    }
+  }, refs) as RefCallback<T>;
