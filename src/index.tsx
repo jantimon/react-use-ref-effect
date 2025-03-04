@@ -62,7 +62,13 @@ export const useRefEffectWithCurrent = <T extends unknown>(
       Object.defineProperties(
         (element: T) => {
           currentRef.current = element;
-          return element && effect(element);
+          const cleanup = element && effect(element);
+          return () => {
+            if (cleanup) {
+              cleanup();
+            }
+            currentRef.current = null;
+          };
         },
         {
           current: {

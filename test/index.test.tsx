@@ -585,4 +585,53 @@ describe('useRefEffectWithCurrent', () => {
     
     act(() => root.unmount());
   });
+
+  it('properly resets current when element unounts', () => {
+    const div = document.createElement('div');
+    let controlRef = null as {
+      current: HTMLDivElement | null;
+    } | null
+    
+    const Demo = () => {
+      const [show, setShow] = useState(true);
+      
+      // Create ref with dependencies
+      const ref = useRefEffectWithCurrent<HTMLElement>((element) => {
+      }, []);
+      
+      controlRef ||= ref as {
+        current: HTMLDivElement | null;
+      };
+
+      return (
+        <>
+          {show && (
+            <div ref={ref} data-testid="element">Element</div>
+          )}
+          <button onClick={() => setShow(false)}>Hide Element</button>
+        </>
+      );
+    };
+  
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+    const [hideButton] = div.querySelectorAll('button');
+    if (!controlRef) {
+      throw new Error('controlRef was not set');
+    }
+    
+    // Initial render
+    expect(controlRef.current instanceof HTMLDivElement).toBe(true);
+    expect(controlRef.current?.getAttribute('data-testid')).toBe('element');
+    
+    // Update dependency but keep same element
+    act(() => {
+      simulateClick(hideButton);
+    });
+    
+    // Should still point to the same element after dependency change
+    expect(controlRef.current).toBe(null);
+
+    act(() => root.unmount());
+  });
 });
