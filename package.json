@@ -57,18 +57,18 @@
     }
   ],
   "devDependencies": {
-    "@size-limit/preset-small-lib": "^11.2.0",
-    "@types/react": "19.0.10",
-    "@types/react-dom": "18.2.25",
-    "happy-dom": "17.1.8",
-    "react": "19.0.0",
-    "husky": "9.0.11",
-    "react-dom": "19.0.0",
-    "size-limit": "7.0.8",
-    "prettier": "3.2.5",
-    "terser": "5.30.3 ",
-    "tsup": "8.4.0",
-    "typescript": "5.7.3",
-    "vitest": "3.0.7"
+    "@size-limit/preset-small-lib": "^12.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
+    "prettier": "^3.7.4",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "size-limit": "^12.0.0",
+    "terser": "^5.44.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
   }
 }
