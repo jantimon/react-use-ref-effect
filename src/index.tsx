@@ -27,18 +27,15 @@ export const useRefEffect = <T extends unknown>(
 /**
  * A custom hook that merges multiple callback refs into one.
  * @param refs An array of RefCallback<T>
- * @returns A callback that sets the refs
+ * @returns A callback that sets all refs
  */
-export const useMergeRefs = <T extends unknown>(...refs: RefCallback<T>[]) =>
+export const useMergeRefs = <T extends unknown>(
+  ...refs: RefCallback<T | null>[]
+) =>
   useCallback((element: T) => {
-    const cleanup = refs
-      .map((ref) => ref(element))
-      .filter((fn): fn is () => void => typeof fn === 'function');
-    if (cleanup.length) {
-      return () => {
-        cleanup.forEach((fn) => fn());
-      };
-    }
+    // Callback ref without cleanup expects null on unmount
+    const cleanups = refs.map((ref) => ref(element) || (() => ref(null)));
+    return () => cleanups.forEach((fn) => fn());
   }, refs) as RefCallback<T>;
 
 /**

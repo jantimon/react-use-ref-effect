@@ -57,6 +57,7 @@ Use case: when you need to apply multiple refs to a single DOM element
 - `const mergedRef = useMergeRefs(ref1, ref2, ...)` - combines multiple refs into a single ref callback that applies all of them to the same element.
 - All cleanup functions from the individual refs are properly called when the element is unmounted or detached.
 - Cannot be mixed with refs from `useRef()`
+- Callback refs without a cleanup function are called with `null` on unmount.
 
 ```js
 import { useRefEffect, useMergeRefs } from 'react-use-ref-effect';

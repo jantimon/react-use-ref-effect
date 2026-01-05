@@ -10,7 +10,7 @@ function simulateClick(element: Element) {
   const clickEvent = new MouseEvent('click', {
     bubbles: true,
     cancelable: true,
-    button: 0
+    button: 0,
   });
   element.dispatchEvent(clickEvent);
 }
@@ -36,7 +36,7 @@ describe('it', () => {
     const div = document.createElement('div');
     let effectElement: any = null;
     const Demo = () => {
-      const ref = useRefEffect(element => {
+      const ref = useRefEffect((element) => {
         effectElement = element;
       }, []);
       return (
@@ -127,7 +127,7 @@ describe('it', () => {
     let element: any = {};
     const Demo = () => {
       const [counter, setCounter] = useState(0);
-      const ref = useRefEffect(newElement => {
+      const ref = useRefEffect((newElement) => {
         element = newElement;
         effectRuns++;
         return () => {
@@ -163,14 +163,17 @@ describe('it', () => {
     let elementName = '';
     const Demo = () => {
       const [counter, setCounter] = useState(0);
-      const ref = useRefEffect<HTMLElement>(newElement => {
-        elementName = newElement.tagName;
-        effectRuns++;
-        return () => {
-          elementName = '';
-          cleanupRuns++;
-        };
-      }, [counter]);
+      const ref = useRefEffect<HTMLElement>(
+        (newElement) => {
+          elementName = newElement.tagName;
+          effectRuns++;
+          return () => {
+            elementName = '';
+            cleanupRuns++;
+          };
+        },
+        [counter]
+      );
       return (
         <>
           {counter > 0 && <span ref={ref}>{counter}</span>}
@@ -204,7 +207,7 @@ describe('it', () => {
     let elementName: string = '';
     const Demo = () => {
       const [counter, setCounter] = useState(0);
-      const ref = useRefEffect<HTMLElement>(newElement => {
+      const ref = useRefEffect<HTMLElement>((newElement) => {
         elementName = newElement.tagName;
         return () => {
           elementName = '';
@@ -233,7 +236,7 @@ describe('it', () => {
     expect(elementName).toBe('');
   });
 
-  it("works in strict mode", () => {
+  it('works in strict mode', () => {
     const div = document.createElement('div');
     let effectRuns = 0;
     let cleanupRuns = 0;
@@ -244,21 +247,20 @@ describe('it', () => {
           cleanupRuns++;
         };
       }, []);
-      return (
-        <button ref={ref}>
-          Demo
-        </button>
-      );
+      return <button ref={ref}>Demo</button>;
     };
 
     act(() => {
-      createRoot(div).render(<StrictMode><Demo /></StrictMode>);
+      createRoot(div).render(
+        <StrictMode>
+          <Demo />
+        </StrictMode>
+      );
     });
     expect(cleanupRuns).toBe(1);
     expect(effectRuns).toBe(2);
   });
 });
-
 
 describe('useMergeRefs', () => {
   it('calls all refs with the element', () => {
@@ -269,12 +271,12 @@ describe('useMergeRefs', () => {
     let ref2Element: any = null;
 
     const Demo = () => {
-      const ref1 = useRefEffect(element => {
+      const ref1 = useRefEffect((element) => {
         ref1Called = true;
         ref1Element = element;
       }, []);
 
-      const ref2 = useRefEffect(element => {
+      const ref2 = useRefEffect((element) => {
         ref2Called = true;
         ref2Element = element;
       }, []);
@@ -292,7 +294,7 @@ describe('useMergeRefs', () => {
     expect(ref1Element instanceof HTMLDivElement).toBe(true);
     expect(ref2Element instanceof HTMLDivElement).toBe(true);
     expect(ref1Element).toBe(ref2Element); // Both refs should point to the same element
-    
+
     act(() => root.unmount());
   });
 
@@ -321,12 +323,12 @@ describe('useMergeRefs', () => {
 
     const root = createRoot(div);
     act(() => root.render(<Demo />));
-    
+
     expect(cleanup1Run).toBe(false);
     expect(cleanup2Run).toBe(false);
-    
+
     act(() => root.unmount());
-    
+
     expect(cleanup1Run).toBe(true);
     expect(cleanup2Run).toBe(true);
   });
@@ -337,35 +339,39 @@ describe('useMergeRefs', () => {
     let ref2Elements: any[] = [];
 
     const Demo = ({ showSpan = false }) => {
-      const ref1 = useRefEffect(element => {
+      const ref1 = useRefEffect((element) => {
         ref1Elements.push(element);
       }, []);
 
-      const ref2 = useRefEffect(element => {
+      const ref2 = useRefEffect((element) => {
         ref2Elements.push(element);
       }, []);
 
       const mergedRef = useMergeRefs(ref1, ref2);
 
-      return showSpan ? <span ref={mergedRef}>Test</span> : <div ref={mergedRef}>Test</div>;
+      return showSpan ? (
+        <span ref={mergedRef}>Test</span>
+      ) : (
+        <div ref={mergedRef}>Test</div>
+      );
     };
 
     const root = createRoot(div);
     act(() => root.render(<Demo />));
-    
+
     expect(ref1Elements.length).toBe(1);
     expect(ref2Elements.length).toBe(1);
     expect(ref1Elements[0] instanceof HTMLDivElement).toBe(true);
     expect(ref2Elements[0] instanceof HTMLDivElement).toBe(true);
-    
+
     // Change the element type to span
     act(() => root.render(<Demo showSpan={true} />));
-    
+
     expect(ref1Elements.length).toBe(2);
     expect(ref2Elements.length).toBe(2);
     expect(ref1Elements[1] instanceof HTMLSpanElement).toBe(true);
     expect(ref2Elements[1] instanceof HTMLSpanElement).toBe(true);
-    
+
     act(() => root.unmount());
   });
 
@@ -397,7 +403,11 @@ describe('useMergeRefs', () => {
     };
 
     act(() => {
-      createRoot(div).render(<React.StrictMode><Demo /></React.StrictMode>);
+      createRoot(div).render(
+        <React.StrictMode>
+          <Demo />
+        </React.StrictMode>
+      );
     });
 
     // In strict mode, effects run twice
@@ -435,7 +445,11 @@ describe('useMergeRefs', () => {
     };
 
     act(() => {
-      createRoot(div).render(<React.StrictMode><Demo /></React.StrictMode>);
+      createRoot(div).render(
+        <React.StrictMode>
+          <Demo />
+        </React.StrictMode>
+      );
     });
 
     // In strict mode, effects run twice
@@ -443,6 +457,77 @@ describe('useMergeRefs', () => {
     expect(ref2CallCount).toBe(2);
     expect(cleanup1Count).toBe(1);
     expect(cleanup2Count).toBe(1);
+  });
+
+  it('calls callback refs without cleanup with null on unmount', () => {
+    const div = document.createElement('div');
+    const calls: Array<HTMLDivElement | null> = [];
+
+    const Demo = () => {
+      // Callback ref without cleanup return expects null call on unmount
+      const callbackRef = React.useCallback((node: HTMLDivElement | null) => {
+        calls.push(node);
+      }, []);
+
+      const mergedRef = useMergeRefs(callbackRef);
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+
+    expect(calls.length).toBe(1);
+    expect(calls[0] instanceof HTMLDivElement).toBe(true);
+
+    act(() => root.unmount());
+
+    // Callback ref without cleanup should be called with null on unmount
+    expect(calls.length).toBe(2);
+    expect(calls[1]).toBe(null);
+  });
+
+  it('handles callback refs with and without cleanup together', () => {
+    const div = document.createElement('div');
+    const noCleanupCalls: Array<HTMLDivElement | null> = [];
+    let cleanupFnCalled = false;
+
+    const Demo = () => {
+      const noCleanupRef = React.useCallback((node: HTMLDivElement | null) => {
+        noCleanupCalls.push(node);
+      }, []);
+
+      const withCleanupRef = useRefEffect<HTMLDivElement>(() => {
+        return () => {
+          cleanupFnCalled = true;
+        };
+      }, []);
+
+      const mergedRef = useMergeRefs(noCleanupRef, withCleanupRef);
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+
+    act(() => root.unmount());
+
+    // Both cleanup mechanisms should work
+    expect(noCleanupCalls[1]).toBe(null);
+    expect(cleanupFnCalled).toBe(true);
+  });
+
+  it('handles empty refs array', () => {
+    const div = document.createElement('div');
+
+    const Demo = () => {
+      const mergedRef = useMergeRefs();
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    // Should not throw
+    act(() => root.render(<Demo />));
+    act(() => root.unmount());
   });
 });
 
@@ -452,9 +537,9 @@ describe('useRefEffectWithCurrent', () => {
     let controlRef: {
       current: HTMLDivElement | null;
     } = {
-      current: null
-    }
-    
+      current: null,
+    };
+
     const Demo = () => {
       const ref = useRefEffectWithCurrent<HTMLDivElement>((element) => {
         // The effect itself doesn't need to do anything special
@@ -465,12 +550,12 @@ describe('useRefEffectWithCurrent', () => {
 
     const root = createRoot(div);
     act(() => root.render(<Demo />));
-    
+
     // Check that the current property is correctly set
     expect(controlRef.current instanceof HTMLDivElement).toBe(true);
-    
+
     act(() => root.unmount());
-    
+
     // Check that current is null after unmount
     expect(controlRef.current).toBe(null);
   });
@@ -481,18 +566,21 @@ describe('useRefEffectWithCurrent', () => {
     let controlRef: {
       current: HTMLDivElement | null;
     } = {
-      current: null
-    }
-    
+      current: null,
+    };
+
     const Demo = () => {
       const [count, setCount] = useState(0);
-      const ref = useRefEffectWithCurrent<HTMLDivElement>((element) => {
-        effectRuns++;
-        // The effect should run on dependency changes
-      }, [count]);
-      
+      const ref = useRefEffectWithCurrent<HTMLDivElement>(
+        (element) => {
+          effectRuns++;
+          // The effect should run on dependency changes
+        },
+        [count]
+      );
+
       controlRef = ref;
-      
+
       return (
         <>
           <div ref={ref}>Test {count}</div>
@@ -503,23 +591,23 @@ describe('useRefEffectWithCurrent', () => {
 
     const root = createRoot(div);
     act(() => root.render(<Demo />));
-    
+
     // Initial render
     expect(controlRef.current instanceof HTMLDivElement).toBe(true);
     expect(effectRuns).toBe(1);
-    
+
     const initialElement = controlRef.current;
-    
+
     // Update the count dependency
     act(() => {
       simulateClick(div.querySelector<HTMLButtonElement>('button')!);
     });
-    
+
     // Effect should run again, but current should still reference the same DOM element
     expect(effectRuns).toBe(2);
     expect(controlRef.current).toBe(initialElement);
     expect(controlRef.current instanceof HTMLDivElement).toBe(true);
-    
+
     act(() => root.unmount());
   });
 
@@ -527,16 +615,18 @@ describe('useRefEffectWithCurrent', () => {
     const div = document.createElement('div');
     let controlRef = null as {
       current: HTMLDivElement | null;
-    } | null
-    
+    } | null;
+
     const Demo = () => {
       const [showAlt, setShowAlt] = useState(false);
       const [count, setCount] = useState(0);
-      
+
       // Create ref with dependencies
-      const ref = useRefEffectWithCurrent<HTMLElement>((element) => {
-      }, [count]);
-      
+      const ref = useRefEffectWithCurrent<HTMLElement>(
+        (element) => {},
+        [count]
+      );
+
       controlRef ||= ref as {
         current: HTMLDivElement | null;
       };
@@ -544,45 +634,49 @@ describe('useRefEffectWithCurrent', () => {
       return (
         <>
           {!showAlt ? (
-            <div ref={ref} data-testid="first">First Element {count}</div>
+            <div ref={ref} data-testid="first">
+              First Element {count}
+            </div>
           ) : (
-            <span ref={ref} data-testid="second">Second Element {count}</span>
+            <span ref={ref} data-testid="second">
+              Second Element {count}
+            </span>
           )}
-          <button onClick={() => setCount(c => c + 1)}>Update Count</button>
+          <button onClick={() => setCount((c) => c + 1)}>Update Count</button>
           <button onClick={() => setShowAlt(true)}>Switch Element</button>
         </>
       );
     };
-  
+
     const root = createRoot(div);
     act(() => root.render(<Demo />));
     const [updateButton, switchButton] = div.querySelectorAll('button');
     if (!controlRef) {
       throw new Error('controlRef was not set');
     }
-    
+
     // Initial render
     expect(controlRef.current instanceof HTMLDivElement).toBe(true);
     expect(controlRef.current?.getAttribute('data-testid')).toBe('first');
-    
+
     // Update dependency but keep same element
     act(() => {
       simulateClick(updateButton);
     });
-    
+
     // Should still point to the same element after dependency change
     expect(controlRef.current instanceof HTMLDivElement).toBe(true);
     expect(controlRef.current?.getAttribute('data-testid')).toBe('first');
-    
+
     // Now change the element type
     act(() => {
       simulateClick(switchButton);
     });
-    
+
     // After element change, current should point to the new element
     expect(controlRef.current instanceof HTMLSpanElement).toBe(true);
     expect(controlRef.current?.getAttribute('data-testid')).toBe('second');
-    
+
     act(() => root.unmount());
   });
 
@@ -590,15 +684,14 @@ describe('useRefEffectWithCurrent', () => {
     const div = document.createElement('div');
     let controlRef = null as {
       current: HTMLDivElement | null;
-    } | null
-    
+    } | null;
+
     const Demo = () => {
       const [show, setShow] = useState(true);
-      
+
       // Create ref with dependencies
-      const ref = useRefEffectWithCurrent<HTMLElement>((element) => {
-      }, []);
-      
+      const ref = useRefEffectWithCurrent<HTMLElement>((element) => {}, []);
+
       controlRef ||= ref as {
         current: HTMLDivElement | null;
       };
@@ -606,29 +699,31 @@ describe('useRefEffectWithCurrent', () => {
       return (
         <>
           {show && (
-            <div ref={ref} data-testid="element">Element</div>
+            <div ref={ref} data-testid="element">
+              Element
+            </div>
           )}
           <button onClick={() => setShow(false)}>Hide Element</button>
         </>
       );
     };
-  
+
     const root = createRoot(div);
     act(() => root.render(<Demo />));
     const [hideButton] = div.querySelectorAll('button');
     if (!controlRef) {
       throw new Error('controlRef was not set');
     }
-    
+
     // Initial render
     expect(controlRef.current instanceof HTMLDivElement).toBe(true);
     expect(controlRef.current?.getAttribute('data-testid')).toBe('element');
-    
+
     // Update dependency but keep same element
     act(() => {
       simulateClick(hideButton);
     });
-    
+
     // Should still point to the same element after dependency change
     expect(controlRef.current).toBe(null);
 
