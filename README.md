@@ -19,7 +19,7 @@
 Executes an effect directly after React attaches a ref to a DOM node and provides cleanup functionality when React detaches the DOM node from the ref.
 
 - The hook does __not__ trigger additional renderings.
-- The hook size is __only 139b__ in v2.0.0.
+- Lightweight: ~700B minified and brotlied.
 
 ## Version 2.0.0 Update
 
@@ -55,8 +55,9 @@ const Component = () => {
 Use case: when you need to apply multiple refs to a single DOM element
 
 - `const mergedRef = useMergeRefs(ref1, ref2, ...)` - combines multiple refs into a single ref callback that applies all of them to the same element.
+- Works with `useRef()`, `useRefEffect()`, callback refs, and any combination of these.
 - All cleanup functions from the individual refs are properly called when the element is unmounted or detached.
-- Cannot be mixed with refs from `useRef()`
+- Only refs that actually change are re-invoked - stable refs are not affected by unstable ones.
 - Callback refs without a cleanup function are called with `null` on unmount.
 
 ```js
@@ -184,6 +185,7 @@ const Component = () => {
 
 # Similar packages:
 - [use-callback-ref](https://github.com/theKashey/use-callback-ref) - great utils around refs and callbacks
+- [react-best-merge-refs](https://github.com/alvaro-cuesta/react-best-merge-refs) - the `useMergeRefs` implementation is based on this library
 
 # License
 MIT
