@@ -2,6 +2,7 @@ import {
   DependencyList,
   useCallback,
   RefCallback,
+  RefObject,
   useRef,
   useMemo,
 } from 'react';
@@ -25,16 +26,28 @@ export const useRefEffect = <T extends unknown>(
   ) as RefCallback<T>;
 
 /**
- * A custom hook that merges multiple callback refs into one.
- * @param refs An array of RefCallback<T>
+ * A custom hook that merges multiple callback refs and ref objects into one.
+ * @param refs An array of RefCallback<T>, RefObject<T>, null, or undefined
  * @returns A callback that sets all refs
  */
 export const useMergeRefs = <T extends unknown>(
-  ...refs: RefCallback<T | null>[]
+  ...refs: Array<RefCallback<T | null> | RefObject<T | null> | null | undefined>
 ) =>
   useCallback((element: T) => {
-    // Callback ref without cleanup expects null on unmount
-    const cleanups = refs.map((ref) => ref(element) || (() => ref(null)));
+    const cleanups = refs.map((ref) => {
+      if (typeof ref === 'function') {
+        // Callback ref without cleanup expects null on unmount
+        return ref(element) || (() => ref(null));
+      } else if (ref) {
+        // RefObject - set current and return cleanup
+        ref.current = element;
+        return () => {
+          ref.current = null;
+        };
+      }
+      // null/undefined ref - no-op
+      return () => {};
+    });
     return () => cleanups.forEach((fn) => fn());
   }, refs) as RefCallback<T>;
 

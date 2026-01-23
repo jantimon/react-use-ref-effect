@@ -529,6 +529,180 @@ describe('useMergeRefs', () => {
     act(() => root.render(<Demo />));
     act(() => root.unmount());
   });
+
+  it('works with RefObject (useRef)', () => {
+    const div = document.createElement('div');
+    let refObjectValue: HTMLDivElement | null = null;
+    let callbackCalled = false;
+
+    const Demo = () => {
+      const refObject = React.useRef<HTMLDivElement>(null);
+      const callbackRef = useRefEffect<HTMLDivElement>(() => {
+        callbackCalled = true;
+      }, []);
+
+      const mergedRef = useMergeRefs(refObject, callbackRef);
+
+      // Capture ref value after render
+      React.useEffect(() => {
+        refObjectValue = refObject.current;
+      });
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+
+    expect(refObjectValue).not.toBe(null);
+    expect(callbackCalled).toBe(true);
+
+    act(() => root.unmount());
+  });
+
+  it('merges useRef + useCallback (without cleanup) + useCallback (with cleanup)', () => {
+    const div = document.createElement('div');
+
+    // Track values for useRef
+    let refObject: React.RefObject<HTMLDivElement | null> = { current: null };
+
+    // Track values for useCallback without cleanup
+    const callbackWithoutCleanupCalls: Array<HTMLDivElement | null> = [];
+
+    // Track values for useCallback with cleanup
+    let callbackWithCleanupElement: HTMLDivElement | null = null;
+    let cleanupCalled = false;
+
+    const Demo = () => {
+      // 1. useRef (RefObject)
+      refObject = React.useRef<HTMLDivElement>(null);
+
+      // 2. useCallback without cleanup (traditional callback ref)
+      const callbackWithoutCleanup = React.useCallback(
+        (node: HTMLDivElement | null) => {
+          callbackWithoutCleanupCalls.push(node);
+        },
+        []
+      );
+
+      // 3. useCallback with cleanup (useRefEffect)
+      const callbackWithCleanup = useRefEffect<HTMLDivElement>((element) => {
+        callbackWithCleanupElement = element;
+        return () => {
+          cleanupCalled = true;
+        };
+      }, []);
+
+      const mergedRef = useMergeRefs(
+        refObject,
+        callbackWithoutCleanup,
+        callbackWithCleanup
+      );
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+
+    // After mount: all refs should have the element
+    expect(refObject.current instanceof HTMLDivElement).toBe(true);
+    expect(callbackWithoutCleanupCalls.length).toBe(1);
+    expect(callbackWithoutCleanupCalls[0] instanceof HTMLDivElement).toBe(true);
+    expect(callbackWithCleanupElement).not.toBe(null);
+
+    // All should reference the same element
+    expect(refObject.current).toBe(callbackWithoutCleanupCalls[0]);
+    expect(refObject.current).toBe(callbackWithCleanupElement);
+
+    // Cleanup should not have been called yet
+    expect(cleanupCalled).toBe(false);
+
+    act(() => root.unmount());
+
+    // After unmount:
+    // - RefObject should be null
+    expect(refObject.current).toBe(null);
+
+    // - Callback without cleanup should have been called with null
+    expect(callbackWithoutCleanupCalls.length).toBe(2);
+    expect(callbackWithoutCleanupCalls[1]).toBe(null);
+
+    // - Callback with cleanup should have had its cleanup function called
+    expect(cleanupCalled).toBe(true);
+  });
+
+  it('clears RefObject on unmount', () => {
+    const div = document.createElement('div');
+    let refObject: React.RefObject<HTMLDivElement | null> = { current: null };
+
+    const Demo = () => {
+      refObject = React.useRef<HTMLDivElement>(null);
+      const mergedRef = useMergeRefs(refObject);
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    act(() => root.render(<Demo />));
+
+    expect(refObject.current instanceof HTMLDivElement).toBe(true);
+
+    act(() => root.unmount());
+
+    expect(refObject.current).toBe(null);
+  });
+
+  it('handles null refs gracefully', () => {
+    const div = document.createElement('div');
+    let callbackCalled = false;
+
+    const Demo = () => {
+      const callbackRef = useRefEffect<HTMLDivElement>(() => {
+        callbackCalled = true;
+      }, []);
+
+      const mergedRef = useMergeRefs(null, callbackRef, undefined);
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+    // Should not throw
+    act(() => root.render(<Demo />));
+
+    expect(callbackCalled).toBe(true);
+
+    act(() => root.unmount());
+  });
+
+  it('handles conditional refs', () => {
+    const div = document.createElement('div');
+    let refObjectValue: HTMLDivElement | null = null;
+
+    const Demo = ({ includeRef = false }: { includeRef?: boolean }) => {
+      const refObject = React.useRef<HTMLDivElement>(null);
+      const conditionalRef = includeRef ? refObject : null;
+
+      const mergedRef = useMergeRefs(conditionalRef);
+
+      React.useEffect(() => {
+        refObjectValue = refObject.current;
+      });
+
+      return <div ref={mergedRef}>Test</div>;
+    };
+
+    const root = createRoot(div);
+
+    // With null ref
+    act(() => root.render(<Demo includeRef={false} />));
+    expect(refObjectValue).toBe(null);
+
+    // With actual ref
+    act(() => root.render(<Demo includeRef={true} />));
+    expect(refObjectValue).not.toBe(null);
+
+    act(() => root.unmount());
+  });
 });
 
 describe('useRefEffectWithCurrent', () => {

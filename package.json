@@ -1,7 +1,7 @@
 {
   "name": "react-use-ref-effect",
   "description": "an useEffect hook optimized for useRef",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "type": "module",
   "license": "MIT",
   "main": "dist/index.cjs",
@@ -49,11 +49,11 @@
   "size-limit": [
     {
       "path": "dist/index.js",
-      "limit": "600 B"
+      "limit": "400 B"
     },
     {
-      "path": "dist/index.mjs",
-      "limit": "500 B"
+      "path": "dist/index.cjs",
+      "limit": "600 B"
     }
   ],
   "devDependencies": {
