@@ -7,11 +7,6 @@ http://github.com/alvaro-cuesta/react-best-merge-refs/
 import { useRef, type RefCallback, type Ref } from 'react';
 
 /**
- * A type that might or might not contain a value.
- */
-type Maybe<T> = { hasValue: true; value: T } | { hasValue: false };
-
-/**
  * A cleanup function returned from a RefCallback.
  */
 type CleanupFn = () => void;
@@ -46,13 +41,6 @@ function assignToRef<T>(ref: NonNullRef<T>, value: T): CleanupFn {
 }
 
 /**
- * Assigns a value to a stored ref, updating its cleanup function.
- */
-function assignToStoredRef<T>(storedRef: StoredRef<T>, value: T): void {
-  storedRef.cleanup = assignToRef(storedRef.ref, value);
-}
-
-/**
  * Runs the cleanup function for a stored ref.
  */
 function cleanupStoredRef<T>(storedRef: StoredRef<T>): void {
@@ -61,61 +49,95 @@ function cleanupStoredRef<T>(storedRef: StoredRef<T>): void {
 }
 
 /**
- * Creates a new StoredRef, optionally initializing it with a value.
+ * Tuple containing a reconciliator function and a stable callback ref.
  */
-function makeStoredRef<T>(
-  ref: NonNullRef<T>,
-  maybeValue: Maybe<T>
-): StoredRef<T> {
-  return {
-    ref,
-    cleanup: maybeValue.hasValue ? assignToRef(ref, maybeValue.value) : null,
-  };
-}
+type MergedCallbackRef<T> = readonly [
+  (refs: Array<NonNullRef<T> | null | undefined>) => void,
+  RefCallback<T>,
+];
 
 /**
- * Reconciles the stored refs with the new refs array, only updating refs that changed.
+ * Creates a merged callback ref with encapsulated state.
  */
-function reconciliateRefs<T>(
-  storedRefs: Array<StoredRef<T> | null>,
-  refs: Array<NonNullRef<T> | null | undefined>,
-  maybeValue: Maybe<T>
-): void {
-  // Ensure storedRefs array is the right length
-  while (storedRefs.length < refs.length) {
-    storedRefs.push(null);
-  }
-  while (storedRefs.length > refs.length) {
-    const removed = storedRefs.pop();
-    if (removed) cleanupStoredRef(removed);
-  }
+function createMergedCallbackRef<T>(): MergedCallbackRef<T> {
+  const storedRefs: Array<StoredRef<T> | null | undefined> = [];
+  /**
+   * Tracks whether the callback ref has been called with a DOM node.
+   *
+   * Reconciliation runs on every render, including the first render before
+   * React calls the callback ref. Without this flag, newly added refs would
+   * be assigned an uninitialized value. It also prevents assigning stale
+   * values to refs added after unmount.
+   */
+  let isMounted = false;
+  let currentValue: T;
 
-  for (let i = 0; i < refs.length; i++) {
-    const ref = refs[i];
-    const storedRef = storedRefs[i];
-
-    // Handle null/undefined refs
-    if (ref == null) {
-      if (storedRef) {
-        cleanupStoredRef(storedRef);
-        storedRefs[i] = null;
+  return [
+    /**
+     * Reconciles stored refs with current refs passed to useMergeRefs
+     *
+     * This function runs on each render to ensure that:
+     * - New refs are initialized with the current value (if any)
+     * - Removed refs are cleaned up
+     * - Changed refs are cleaned up and re-initialized
+     * - Reordered refs are tracked independently
+     */
+    (refs: Array<NonNullRef<T> | null | undefined>) => {
+      for (let i = 0; i < Math.max(refs.length, storedRefs.length); i++) {
+        const latestRef = refs[i];
+        const storedRef = storedRefs[i];
+        if (
+          // Handle null/undefined refs -> cleanup if needed and unset
+          latestRef == null ||
+          // The ref has not been set yet -> assign
+          !storedRef ||
+          // Ref is NOT stable -> cleanup and re-assign
+          storedRef.ref !== latestRef
+        ) {
+          if (storedRef) {
+            cleanupStoredRef(storedRef);
+          }
+          storedRefs[i] = latestRef && {
+            ref: latestRef,
+            cleanup: isMounted
+              ? // Assign only if mounted to avoid assigning stale values
+                // as other currentValue might be uninitialized
+                assignToRef(latestRef, currentValue)
+              : null,
+          };
+        }
       }
-      continue;
-    }
-
-    // No stored ref yet - create one
-    if (!storedRef) {
-      storedRefs[i] = makeStoredRef(ref, maybeValue);
-      continue;
-    }
-
-    // Ref is stable - do nothing
-    if (storedRef.ref === ref) continue;
-
-    // Same index but different ref - cleanup old and store new
-    cleanupStoredRef(storedRef);
-    storedRefs[i] = makeStoredRef(ref, maybeValue);
-  }
+      // Clean up any excess stored refs
+      storedRefs.length = refs.length;
+    },
+    /** The actual ref - a stable callback ref to return from the hook
+     *
+     * This function is called by React when the ref is attached or detached
+     *
+     * This happens when:
+     * - The component mounts (with the DOM node)
+     * - The component node changes e.g. the ref is moved to another element
+     *
+     * It returns a cleanup which for React 19+ is called when:
+     * - The component unmounts
+     * - The ref is detached from the DOM node (e.g. moved to another element)
+     */
+    (value: T) => {
+      isMounted = true;
+      currentValue = value;
+      for (const storedRef of storedRefs) {
+        if (storedRef) {
+          storedRef.cleanup = storedRef && assignToRef(storedRef.ref, value);
+        }
+      }
+      return () => {
+        isMounted = false;
+        for (const storedRef of storedRefs) {
+          if (storedRef) cleanupStoredRef(storedRef);
+        }
+      };
+    },
+  ];
 }
 
 /**
@@ -137,28 +159,17 @@ function reconciliateRefs<T>(
 export function useMergeRefs<T>(
   ...refs: Array<RefCallback<T | null> | Ref<T | null> | null | undefined>
 ): RefCallback<T> {
-  const storedRefsRef = useRef<Array<StoredRef<T> | null>>([]);
-  const storedMaybeValueRef = useRef<Maybe<T>>({ hasValue: false });
-
-  reconciliateRefs(storedRefsRef.current, refs, storedMaybeValueRef.current);
-
-  // This callback is always stable, ensuring React only calls us on actual element changes
-  const callbackRef = useRef<RefCallback<T>>(null);
-  callbackRef.current ??= (value: T) => {
-    storedMaybeValueRef.current = { hasValue: true, value };
-
-    for (const storedRef of storedRefsRef.current) {
-      if (storedRef) assignToStoredRef(storedRef, value);
-    }
-
-    return () => {
-      storedMaybeValueRef.current = { hasValue: false };
-
-      for (const storedRef of storedRefsRef.current) {
-        if (storedRef) cleanupStoredRef(storedRef);
-      }
-    };
-  };
-
-  return callbackRef.current;
+  const ref = useRef<MergedCallbackRef<T> | null>(null);
+  const [reconciliate, callbackRef] = (ref.current ??=
+    createMergedCallbackRef<T>());
+  /**
+   * Reconcile on every render to handle:
+   * - Refs added: new refs get initialized with current value (if mounted)
+   * - Refs removed: old refs get cleaned up
+   * - Refs changed: old ref cleaned up, new ref initialized
+   * - Refs reordered: each position is tracked independently
+   * - Array length changes: shrinking cleans up removed positions
+   */
+  reconciliate(refs);
+  return callbackRef;
 }
