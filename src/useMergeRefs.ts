@@ -1,9 +1,8 @@
-/*!
-Based on react-best-merge-refs by Álvaro Cuesta <alvaro-cuesta@GitHub>
-Licensed under the MIT License (MIT), see
-http://github.com/alvaro-cuesta/react-best-merge-refs/
-*/
-
+/*
+ * Based on react-best-merge-refs by Álvaro Cuesta <alvaro-cuesta@GitHub>
+ * Licensed under the MIT License (MIT), see
+ * http://github.com/alvaro-cuesta/react-best-merge-refs/
+ */
 import { useRef, type RefCallback, type Ref } from 'react';
 
 /**
@@ -21,14 +20,14 @@ type NonNullRef<T> = Exclude<Ref<T>, null>;
  * assigning to it, or `null` if it has not been assigned yet.
  */
 type StoredRef<T> = {
-  ref: NonNullRef<T>;
-  cleanup: CleanupFn | null;
+  ref_: NonNullRef<T>;
+  cleanup_: CleanupFn | null;
 };
 
 /**
  * Assigns a value to a ref and returns the appropriate cleanup function.
  */
-function assignToRef<T>(ref: NonNullRef<T>, value: T): CleanupFn {
+const assignToRef = <T>(ref: NonNullRef<T>, value: T): CleanupFn => {
   if (typeof ref === 'function') {
     const cleanup = ref(value);
     return typeof cleanup === 'function' ? cleanup : () => ref(null);
@@ -38,15 +37,15 @@ function assignToRef<T>(ref: NonNullRef<T>, value: T): CleanupFn {
       ref.current = null;
     };
   }
-}
+};
 
 /**
  * Runs the cleanup function for a stored ref.
  */
-function cleanupStoredRef<T>(storedRef: StoredRef<T>): void {
-  storedRef.cleanup?.();
-  storedRef.cleanup = null;
-}
+const cleanupStoredRef = <T>(storedRef: StoredRef<T>): void => {
+  storedRef.cleanup_?.();
+  storedRef.cleanup_ = null;
+};
 
 /**
  * Tuple containing a reconciliator function and a stable callback ref.
@@ -59,8 +58,10 @@ type MergedCallbackRef<T> = readonly [
 /**
  * Creates a merged callback ref with encapsulated state.
  */
-function createMergedCallbackRef<T>(): MergedCallbackRef<T> {
+const createMergedCallbackRef = <T>(): MergedCallbackRef<T> => {
   const storedRefs: Array<StoredRef<T> | null | undefined> = [];
+  /** use a unique symbol to represent not mounted state */
+  const NOT_MOUNTED_SYMBOL = {} as unknown as symbol;
   /**
    * Tracks whether the callback ref has been called with a DOM node.
    *
@@ -69,8 +70,7 @@ function createMergedCallbackRef<T>(): MergedCallbackRef<T> {
    * be assigned an uninitialized value. It also prevents assigning stale
    * values to refs added after unmount.
    */
-  let isMounted = false;
-  let currentValue: T;
+  let currentValue: T | typeof NOT_MOUNTED_SYMBOL = NOT_MOUNTED_SYMBOL;
 
   return [
     /**
@@ -83,32 +83,34 @@ function createMergedCallbackRef<T>(): MergedCallbackRef<T> {
      * - Reordered refs are tracked independently
      */
     (refs: Array<NonNullRef<T> | null | undefined>) => {
-      for (let i = 0; i < Math.max(refs.length, storedRefs.length); i++) {
+      const refCount = refs.length;
+      for (let i = 0; i < Math.max(refCount, storedRefs.length); i++) {
         const latestRef = refs[i];
         const storedRef = storedRefs[i];
         if (
           // Handle null/undefined refs -> cleanup if needed and unset
-          latestRef == null ||
+          !latestRef ||
           // The ref has not been set yet -> assign
           !storedRef ||
           // Ref is NOT stable -> cleanup and re-assign
-          storedRef.ref !== latestRef
+          storedRef.ref_ !== latestRef
         ) {
           if (storedRef) {
             cleanupStoredRef(storedRef);
           }
           storedRefs[i] = latestRef && {
-            ref: latestRef,
-            cleanup: isMounted
-              ? // Assign only if mounted to avoid assigning stale values
-                // as other currentValue might be uninitialized
-                assignToRef(latestRef, currentValue)
-              : null,
+            ref_: latestRef,
+            cleanup_:
+              currentValue !== NOT_MOUNTED_SYMBOL
+                ? // Assign only if mounted to avoid assigning stale values
+                  // as other currentValue might be uninitialized
+                  assignToRef(latestRef, currentValue)
+                : null,
           };
         }
       }
       // Clean up any excess stored refs
-      storedRefs.length = refs.length;
+      storedRefs.length = refCount;
     },
     /** The actual ref - a stable callback ref to return from the hook
      *
@@ -123,22 +125,21 @@ function createMergedCallbackRef<T>(): MergedCallbackRef<T> {
      * - The ref is detached from the DOM node (e.g. moved to another element)
      */
     (value: T) => {
-      isMounted = true;
       currentValue = value;
       for (const storedRef of storedRefs) {
         if (storedRef) {
-          storedRef.cleanup = storedRef && assignToRef(storedRef.ref, value);
+          storedRef.cleanup_ = storedRef && assignToRef(storedRef.ref_, value);
         }
       }
       return () => {
-        isMounted = false;
+        currentValue = NOT_MOUNTED_SYMBOL;
         for (const storedRef of storedRefs) {
           if (storedRef) cleanupStoredRef(storedRef);
         }
       };
     },
   ];
-}
+};
 
 /**
  * A custom hook that merges multiple callback refs and ref objects into one.
@@ -156,9 +157,9 @@ function createMergedCallbackRef<T>(): MergedCallbackRef<T> {
  * @param refs Refs to merge (RefCallback, RefObject, null, or undefined)
  * @returns A callback ref that can be passed to a React `ref` prop
  */
-export function useMergeRefs<T>(
+export const useMergeRefs = <T>(
   ...refs: Array<RefCallback<T | null> | Ref<T | null> | null | undefined>
-): RefCallback<T> {
+): RefCallback<T> => {
   const ref = useRef<MergedCallbackRef<T> | null>(null);
   const [reconciliate, callbackRef] = (ref.current ??=
     createMergedCallbackRef<T>());
@@ -172,4 +173,4 @@ export function useMergeRefs<T>(
    */
   reconciliate(refs);
   return callbackRef;
-}
+};

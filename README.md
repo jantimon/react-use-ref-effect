@@ -9,9 +9,9 @@
     <a href='https://github.com/jantimon/react-use-ref-effect/workflows/CI?query=workflow%3A"CI"'>
        <img alt="Github Actions" src="https://github.com/jantimon/react-use-ref-effect/workflows/CI/badge.svg?style=flat-square">
     </a>
-    <a href="https://bundlephobia.com/result?p=react-use-ref-effect">
-      <img src="https://img.shields.io/bundlephobia/minzip/react-use-ref-effect.svg" alt="bundle size">
-    </a> 
+    <br/>
+    <img src="https://img.shields.io/bundlejs/size/react-use-ref-effect?exports=useRefEffect&externals=react&format=both&label=useRefEffect" alt="useRefEffect bundle size">
+    <img src="https://img.shields.io/bundlejs/size/react-use-ref-effect?exports=useMergeRefs&externals=react&format=both&label=useMergeRefs" alt="useMergeRefs bundle size">
 </div>
 
 ---
@@ -19,7 +19,7 @@
 Executes an effect directly after React attaches a ref to a DOM node and provides cleanup functionality when React detaches the DOM node from the ref.
 
 - The hook does __not__ trigger additional renderings.
-- Lightweight: ~700B minified and brotlied.
+- Lightweight: ~500B minified and brotlied.
 
 ## Version 2.0.0 Update
 
@@ -59,6 +59,38 @@ Use case: when you need to apply multiple refs to a single DOM element
 - All cleanup functions from the individual refs are properly called when the element is unmounted or detached.
 - Only refs that actually change are re-invoked - stable refs are not affected by unstable ones.
 - Callback refs without a cleanup function are called with `null` on unmount.
+
+> [!WARNING]
+> Most ref merging implementations have a subtle bug: **when *any* ref changes, *all* refs get re-invoked**! This breaks React's contract - stable refs should only be called once on mount and once on unmount.
+
+`useMergeRefs` tracks each ref independently. Notice in the following chart the step 2: when **Ref B** changes, **Ref A stays** unchanged - it doesn't get a spurious cleanup/init cycle. Naive implementations would call cleanup and init on *both* refs, breaking event listeners, animations, or other stateful logic in Ref A:
+
+```mermaid
+flowchart TB
+    subgraph T1 ["1: Mount"]
+        direction LR
+        N1["🟢 Node created"]
+        A1["🟢 Ref A: init(node)"]
+        B1["🟢 Ref B: init(node)"]
+    end
+
+    subgraph T2 ["2: Rerender (Ref B change)"]
+        direction LR
+        N2["⚪ Node unchanged"]
+        A2["⚪ Ref A: unchanged"]
+        B2["🔴 Ref B: cleanup() 
+        🟢 Ref B': init(node)"]
+    end
+
+    subgraph T3 ["3: Unmount"]
+        direction LR
+        N4["🔴 Node removed"]
+        A3["🔴 Ref A: cleanup()"]
+        B4["🔴 Ref B': cleanup()"]
+    end
+
+    T1 --> T2 --> T3
+```
 
 ```js
 import { useRefEffect, useMergeRefs } from 'react-use-ref-effect';
